@@ -1,7 +1,7 @@
 # VSLA-CLIP Baseline for VReID-XFD Workshop (WACV 2026)
 
 This repository contains the **baseline implementation** for the **VReID-XFD: Video-based Human Recognition at Extreme Far Distances** workshop, accepted at **WACV 2026**.  
-It is built upon the [VSLA-CLIP](https://github.com/FHR-L/VSLA-CLIP) framework and provides reproducible training and evaluation pipelines for long-range person recognition tasks on the **AG-VPReID** and **DetReIDX** datasets.
+It is built upon the [VSLA-CLIP](https://github.com/FHR-L/VSLA-CLIP) framework and provides reproducible training and evaluation pipelines for long-range person recognition tasks on the **DetReIDX** dataset.
 
 ---
 
@@ -99,30 +99,6 @@ Objectives:
 - **Dr. Kien Nguyen**, Queensland University of Technology, Australia  
 - **Prof. Vitomir Štruc**, University of Ljubljana, Slovenia  
 - **Kailash Hambarde**, Instituto de Telecomunicações, Portugal  
-
----
-
-### 🕓 Tentative Schedule
-
-| Time | Session |
-|------|----------|
-| 09:00–09:15 | Opening Remarks |
-| 09:15–10:00 | Invited Talk 1 |
-| 10:00–10:45 | Oral Presentations |
-| 10:45–11:15 | Coffee Break + Poster Session |
-| 11:15–11:45 | Competition Results (DetReIDX Challenge) |
-| 11:45–12:15 | Invited Talk 2 |
-| 12:15–12:45 | Panel Discussion |
-| 12:45–13:00 | Closing Remarks |
-
----
-
-### 🌍 Social Impact
-
-This workshop aims to advance technologies supporting:
-- **Public safety**
-- **Disaster response**
-- **Humanitarian surveillance**
 
 ---
 
