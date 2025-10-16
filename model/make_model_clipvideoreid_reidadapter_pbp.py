@@ -92,7 +92,8 @@ class build_transformer(nn.Module):
         self.w_resolution = int((cfg.INPUT.SIZE_TRAIN[1]-16)//cfg.MODEL.STRIDE_SIZE[1] + 1)
         self.vision_stride_size = cfg.MODEL.STRIDE_SIZE[0]
         clip_model = load_clip_to_cpu(self.model_name, self.h_resolution, self.w_resolution, self.vision_stride_size, cfg)
-        clip_model.to("cuda")
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        clip_model.to(device)
 
         self.image_encoder = clip_model.visual
         self.cv_embed = None

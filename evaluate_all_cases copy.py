@@ -49,21 +49,6 @@ def extract_tracklet_name(img_paths):
     return "unknown"
 
 
-def _average_precision(y_true_set, y_pred_list):
-    """Compute AP given a set of relevant items and an ordered prediction list.
-    Used here for AP@K when y_pred_list is truncated to top-K.
-    """
-    if not y_true_set:
-        return 0.0
-    ap = 0.0
-    hits = 0
-    for rank_idx, pred in enumerate(y_pred_list):
-        if pred in y_true_set:
-            hits += 1
-            ap += hits / (rank_idx + 1)
-    return ap / len(y_true_set)
-
-
 def evaluate_case(cfg, model, case_name, case_subset, use_gpu=True):
     """
     Evaluate model on a specific case
@@ -201,16 +186,19 @@ def evaluate_case(cfg, model, case_name, case_subset, use_gpu=True):
     # Compute distance matrix with sorted features
     distmat = _cal_dist(qf=qf_sorted, gf=gf_sorted, distance=cfg.TEST.DISTANCE)
     
-    # Get ranking indices for each query (argsort gives indices from smallest to largest distance)
+    # Get top-10 gallery indices for each query
+    # argsort gives indices from smallest to largest distance
     ranking_indices = torch.argsort(distmat, dim=1).numpy()  # shape: (num_queries, num_galleries)
-
-    # Build full ranking list for each query (all galleries)
-    full_rankings = []
+    
+    # Get top-10 for each query (or all galleries if less than 10)
+    top10_rankings = []
     num_galleries = len(gallery_tracklet_names)
+    top_k = min(10, num_galleries)  # Get top-10 or all galleries if less than 10
+    
     for i in range(len(query_tracklet_names)):
-        all_indices = ranking_indices[i]  # All galleries in distance order
-        all_gallery_names = [gallery_tracklet_names[idx] for idx in all_indices]
-        full_rankings.append(all_gallery_names)
+        topk_indices = ranking_indices[i][:top_k]  # Get top k (these are indices in sorted gallery)
+        topk_gallery_names = [gallery_tracklet_names[idx] for idx in topk_indices]
+        top10_rankings.append(topk_gallery_names)
     
     # Run evaluation metrics (may fail for anonymized data, but rankings are already computed)
     start_time = time.time()
@@ -228,7 +216,6 @@ def evaluate_case(cfg, model, case_name, case_subset, use_gpu=True):
     print(f"\nEvaluation completed in {elapsed_time:.2f} seconds")
     print(f"\n{'Metric':<20} {'Value':<15}")
     print("-" * 35)
-    # Use the mAP from test() function - this is the authoritative result
     print(f"{'mAP':<20} {mAP:.2%}")
     for r in ranks:
         if r <= len(cmc):  # Only print ranks that exist
@@ -246,7 +233,7 @@ def evaluate_case(cfg, model, case_name, case_subset, use_gpu=True):
         'num_gallery_ids': len(set([x[1] for x in dataset.gallery])),
         'elapsed_time': elapsed_time,
         'query_tracklet_names': query_tracklet_names,
-        'full_rankings': full_rankings
+        'top10_rankings': top10_rankings
     }
 
 
@@ -306,8 +293,7 @@ def print_summary(results):
 
 def generate_ranking_csv(results, output_path='evaluation_rankings.csv'):
     """
-    Generate CSV file with query tracklets and their complete gallery rankings.
-    PIDs and camids can be extracted from tracklet names during metric calculation.
+    Generate CSV file with query tracklets and their top-10 gallery matches.
     
     Args:
         results: List of evaluation results from all cases
@@ -322,26 +308,25 @@ def generate_ranking_csv(results, output_path='evaluation_rankings.csv'):
     for result in results:
         case_name = result['case_name']
         query_names = result['query_tracklet_names']
-        full_rankings = result['full_rankings']
+        top10_rankings = result['top10_rankings']
         
         print(f"Processing {case_name}: {len(query_names)} queries")
         
         # For each query tracklet in this case
-        for query_name, full_galleries in zip(query_names, full_rankings):
-            # Join all gallery tracklets with spaces (complete ranking)
-            gallery_str = ' '.join(full_galleries)
+        for query_name, top10_galleries in zip(query_names, top10_rankings):
+            # Join top-10 gallery tracklets with spaces
+            gallery_str = ' '.join(top10_galleries)
             
             csv_rows.append({
                 'row_id': row_id,
-                'case': case_name,
                 'query_tracklet': query_name,
-                'ranked_gallery_tracklets': gallery_str
+                'gallery_tracklets': gallery_str
             })
             row_id += 1
     
     # Write to CSV file
     with open(output_path, 'w', newline='') as csvfile:
-        fieldnames = ['row_id', 'case', 'query_tracklet', 'ranked_gallery_tracklets']
+        fieldnames = ['row_id', 'query_tracklet', 'gallery_tracklets']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         
         writer.writeheader()
@@ -498,8 +483,8 @@ def main():
         print_summary(results)
         print(f"\nTotal evaluation time: {timedelta(seconds=int(total_elapsed))}")
         
-        # Generate ranking CSV file with all gallery results
-        csv_output_path = 'output/cross_attn/detreidx/alpha/256/evaluation_rankings_all_galleries.csv'
+        # Generate ranking CSV file
+        csv_output_path = 'output/cross_attn/detreidx/alpha/256/evaluation_rankings.csv'
         os.makedirs(os.path.dirname(csv_output_path), exist_ok=True)
         generate_ranking_csv(results, output_path=csv_output_path)
         
